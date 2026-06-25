@@ -1,56 +1,42 @@
 # Spek
 
-Spek is an acoustic spectrum analyser written in C++. It uses FFmpeg
-libraries for audio decoding and wxWidgets for the GUI.
+Spek is a Windows-only WinUI 3 acoustic spectrum analyser.
 
-Spek is available on *BSD, GNU/Linux, Windows and Mac OS X.
+The user interface is built with the Windows App SDK. Audio analysis uses
+`spek-native.dll`, a small C ABI wrapper over Spek's FFmpeg/FFT core. If the
+native DLL is not present, the WinUI app can fall back to a managed NAudio
+analyser.
 
-Find out more about Spek on its website: <https://www.spek.cc/>
+## Project Layout
 
-## Spek 0.8.5 - Released 2023-01-09
+- `src-winui/Spek.WinUI`: WinUI 3 desktop app.
+- `src-winui/native`: CMake project that builds `spek-native.dll`.
+- `src`: native audio, FFT, palette, and pipeline core used by the DLL.
+- `tests/samples`: audio fixtures used for manual validation.
 
-### New Features And Enhancements
+The repository is trimmed to the Windows WinUI application, its native analysis
+core, and sample audio files. Current distribution is ZIP-based.
 
-New features since 0.8.2:
+## Requirements
 
- * Upgrade to FFmpeg 5.1
- * Add 2 more palettes and change the default.
- * Allow changing the DFT window size and function.
- * Allow switching between audio streams and channels.
- * Add translations for 14 additional languages.
+- Windows 10 version 1809 or newer.
+- .NET SDK compatible with `net10.0-windows10.0.19041.0`.
+- MSYS2 MinGW64 with CMake, Ninja, pkgconf, and FFmpeg development packages for
+  building the native DLL.
 
-Enhancements:
+## Build
 
- * Remove dependency on `intltool`.
- * Fix FFmpeg build warnings.
- * Detect AR tool.
- * Use Homebrew for macOS dependencies.
- * Improve test coverage.
- * Use `XDG_CONFIG_HOME` on Unix systems.
+```powershell
+dotnet restore .\src-winui\Spek.WinUI.slnx
+dotnet build .\src-winui\Spek.WinUI\Spek.WinUI.csproj -c Debug -r win-x64
+```
 
-Bugfixes:
+## Publish
 
- * Remove association with .mod and MIDI files.
- * Fix autoconf errors.
- * Fix an AVX-related crash.
+```powershell
+powershell -ExecutionPolicy Bypass -File .\src-winui\publish-winui.ps1
+```
 
-### Sources / Packages
-
-Spek 0.8.5 tarball:
-
- * <https://github.com/alexkay/spek/releases/download/v0.8.5/spek-0.8.5.tar.xz>
-
-Windows and Mac OS X binaries:
-
- * <https://github.com/alexkay/spek/releases/download/v0.8.2/spek-0.8.2.msi>
- * <https://github.com/alexkay/spek/releases/download/v0.8.2/spek-0.8.2.zip>
- * <https://github.com/alexkay/spek/releases/download/v0.8.2/spek-0.8.2.dmg>
-
-Unix packages:
-
- * <https://github.com/alexkay/spek/blob/master/INSTALL.md#bsd-and-gnulinux>
-
-### Dependencies
-
- * wxWidgets >= 3
- * A recent version of FFmpeg
+The publish script builds the native FFmpeg core, publishes the WinUI app,
+copies the required native DLL dependency closure, and writes a portable ZIP to
+`src-winui\artifacts`.
