@@ -71,37 +71,16 @@ Artist:
 
 * Olga Vasylevska
 
-## Binary packages
+## Windows distribution
 
-Official binary packages for Windows and OS X in addition to Spek include the
-following components:
+The WinUI distribution includes Spek plus these primary runtime components.
+See `THIRD-PARTY-NOTICES.md` for package versions, licence metadata, source
+locations, and the files copied into release ZIPs.
 
-* [wxWidgets](http://www.wxwidgets.org/) is distributed under wxWindows 3.1 (see
-  lic/wxWindows).
+* [Microsoft Windows App SDK](https://github.com/microsoft/WindowsAppSDK) for
+  the WinUI 3 desktop application runtime.
 
-* [FFmpeg](http://ffmpeg.org/) is distributed under GNU GPL (see lic/GPL).
+* [NAudio](https://github.com/naudio/NAudio) for the managed audio fallback.
 
-* [pthreads-win32](http://sources.redhat.com/pthreads-win32/) is distributed
-  under GNU LGPL (see lic/LGPL).
-
-* [libjpeg](http://www.ijg.org/) is distributed under the IJG licence (see
-  lic/IJG).
-
-* [libpng](http://www.libpng.org/pub/png/libpng.html) is distributed under the
-  libpng licence (see lic/libpng).
-
-* The regex library used by wxWidgets is (c) 1998, 1999 Henry Spencer (see
-  lic/regex).
-
-* [libtiff](http://www.remotesensing.org/libtiff/) is distributed under a
-  BSD-like licence (see lic/libtiff).
-
-* [expat](http://expat.sourceforge.net/) is distributed under the Expat licence
-  (see lic/Expat).
-
-* [zlib](http://www.zlib.net/) is distributed under the zlib licence (see
-  lic/zlib).
-
-* Spek is bundled with toolbar icons from the
-  [Dropline Neu!](http://art.gnome.org/themes/icon) icon theme. The icons are
-  (c) Silvestre Herrera, distributed under GNU GPL (see lic/GPL).
+* [FFmpeg](https://ffmpeg.org/) and MSYS2 MinGW64 runtime libraries for native
+  audio decoding through `spek-native.dll`.
