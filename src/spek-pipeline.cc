@@ -1,20 +1,24 @@
+#ifndef SPEK_CORE_NO_WX
 #include <wx/intl.h>
+#define ngettext wxPLURAL
+#endif
 
 #include <assert.h>
 #include <math.h>
-#include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <condition_variable>
+#include <mutex>
+#include <sstream>
+#include <thread>
 #include <vector>
 
 #include "spek-audio.h"
 #include "spek-fft.h"
 
 #include "spek-pipeline.h"
-
-#define ngettext wxPLURAL
 
 enum
 {
@@ -39,20 +43,16 @@ struct spek_pipeline
     float *input;
     float *output;
 
-    pthread_t reader_thread;
+    std::thread reader_thread;
     bool has_reader_thread;
-    pthread_mutex_t reader_mutex;
-    bool has_reader_mutex;
-    pthread_cond_t reader_cond;
-    bool has_reader_cond;
-    pthread_t worker_thread;
+    std::mutex reader_mutex;
+    std::condition_variable reader_cond;
+    std::thread worker_thread;
     bool has_worker_thread;
-    pthread_mutex_t worker_mutex;
-    bool has_worker_mutex;
-    pthread_cond_t worker_cond;
-    bool has_worker_cond;
+    std::mutex worker_mutex;
+    std::condition_variable worker_cond;
     bool worker_done;
-    volatile bool quit;
+    bool quit;
 };
 
 // Forward declarations.
@@ -85,11 +85,7 @@ struct spek_pipeline * spek_pipeline_open(
     p->input = NULL;
     p->output = NULL;
     p->has_reader_thread = false;
-    p->has_reader_mutex = false;
-    p->has_reader_cond = false;
     p->has_worker_thread = false;
-    p->has_worker_mutex = false;
-    p->has_worker_cond = false;
 
     if (!p->file->get_error()) {
         p->nfft = p->fft->get_input_size();
@@ -117,13 +113,10 @@ void spek_pipeline_start(struct spek_pipeline *p)
     p->worker_done = false;
     p->quit = false;
 
-    p->has_reader_mutex = !pthread_mutex_init(&p->reader_mutex, NULL);
-    p->has_reader_cond = !pthread_cond_init(&p->reader_cond, NULL);
-    p->has_worker_mutex = !pthread_mutex_init(&p->worker_mutex, NULL);
-    p->has_worker_cond = !pthread_cond_init(&p->worker_cond, NULL);
-
-    p->has_reader_thread = !pthread_create(&p->reader_thread, NULL, &reader_func, p);
-    if (!p->has_reader_thread) {
+    try {
+        p->reader_thread = std::thread(reader_func, p);
+        p->has_reader_thread = true;
+    } catch (...) {
         spek_pipeline_close(p);
     }
 }
@@ -132,24 +125,21 @@ void spek_pipeline_close(struct spek_pipeline *p)
 {
     if (p->has_reader_thread) {
         p->quit = true;
-        pthread_join(p->reader_thread, NULL);
+        if (p->reader_thread.joinable()) {
+            p->reader_thread.join();
+        }
         p->has_reader_thread = false;
     }
-    if (p->has_worker_cond) {
-        pthread_cond_destroy(&p->worker_cond);
-        p->has_worker_cond = false;
-    }
-    if (p->has_worker_mutex) {
-        pthread_mutex_destroy(&p->worker_mutex);
-        p->has_worker_mutex = false;
-    }
-    if (p->has_reader_cond) {
-        pthread_cond_destroy(&p->reader_cond);
-        p->has_reader_cond = false;
-    }
-    if (p->has_reader_mutex) {
-        pthread_mutex_destroy(&p->reader_mutex);
-        p->has_reader_mutex = false;
+    if (p->has_worker_thread) {
+        {
+            std::lock_guard<std::mutex> lock(p->worker_mutex);
+            p->input_pos = -1;
+        }
+        p->worker_cond.notify_one();
+        if (p->worker_thread.joinable()) {
+            p->worker_thread.join();
+        }
+        p->has_worker_thread = false;
     }
     if (p->output) {
         free(p->output);
@@ -171,6 +161,113 @@ void spek_pipeline_close(struct spek_pipeline *p)
 
 std::string spek_pipeline_desc(const struct spek_pipeline *pipeline)
 {
+#ifdef SPEK_CORE_NO_WX
+    std::vector<std::string> items;
+
+    if (!pipeline->file->get_codec_name().empty()) {
+        items.push_back(pipeline->file->get_codec_name());
+    }
+
+    if (pipeline->file->get_bit_rate()) {
+        std::ostringstream item;
+        item << (pipeline->file->get_bit_rate() + 500) / 1000 << " kbps";
+        items.push_back(item.str());
+    }
+
+    if (pipeline->file->get_sample_rate()) {
+        std::ostringstream item;
+        item << pipeline->file->get_sample_rate() << " Hz";
+        items.push_back(item.str());
+    }
+
+    if (pipeline->file->get_bits_per_sample() && !pipeline->file->get_bit_rate()) {
+        std::ostringstream item;
+        item << pipeline->file->get_bits_per_sample()
+            << (pipeline->file->get_bits_per_sample() == 1 ? " bit" : " bits");
+        items.push_back(item.str());
+    }
+
+    if (pipeline->file->get_channels()) {
+        std::ostringstream item;
+        item << "channel " << pipeline->channel + 1 << " / " << pipeline->file->get_channels();
+        items.push_back(item.str());
+    }
+
+    if (pipeline->file->get_error() == AudioError::OK) {
+        std::ostringstream fft_item;
+        fft_item << "W:" << pipeline->nfft;
+        items.push_back(fft_item.str());
+
+        std::string window_function_name;
+        switch (pipeline->window_function) {
+        case WINDOW_HANN:
+            window_function_name = "Hann";
+            break;
+        case WINDOW_HAMMING:
+            window_function_name = "Hamming";
+            break;
+        case WINDOW_BLACKMAN_HARRIS:
+            window_function_name = "Blackman-Harris";
+            break;
+        default:
+            assert(false);
+        }
+        if (window_function_name.size()) {
+            items.push_back("F:" + window_function_name);
+        }
+    }
+
+    std::string desc;
+    for (const auto& item : items) {
+        if (!desc.empty()) {
+            desc.append(", ");
+        }
+        desc.append(item);
+    }
+
+    std::string error;
+    switch (pipeline->file->get_error()) {
+    case AudioError::CANNOT_OPEN_FILE:
+        error = "Cannot open input file";
+        break;
+    case AudioError::NO_STREAMS:
+        error = "Cannot find stream info";
+        break;
+    case AudioError::NO_AUDIO:
+        error = "The file contains no audio streams";
+        break;
+    case AudioError::NO_DECODER:
+        error = "Cannot find decoder";
+        break;
+    case AudioError::NO_DURATION:
+        error = "Unknown duration";
+        break;
+    case AudioError::NO_CHANNELS:
+        error = "No audio channels";
+        break;
+    case AudioError::CANNOT_OPEN_DECODER:
+        error = "Cannot open decoder";
+        break;
+    case AudioError::BAD_SAMPLE_FORMAT:
+        error = "Unsupported sample format";
+        break;
+    case AudioError::OK:
+        break;
+    }
+
+    if (desc.empty()) {
+        desc = error;
+    } else if (pipeline->stream < pipeline->file->get_streams()) {
+        std::ostringstream item;
+        item << "Stream " << pipeline->stream + 1 << " / "
+            << pipeline->file->get_streams() << ": " << desc;
+        desc = item.str();
+    } else if (!error.empty()) {
+        desc = error + ": " + desc;
+    }
+
+    return desc;
+#else
     std::vector<std::string> items;
 
     if (!pipeline->file->get_codec_name().empty()) {
@@ -288,6 +385,7 @@ std::string spek_pipeline_desc(const struct spek_pipeline *pipeline)
     }
 
     return desc;
+#endif
 }
 
 int spek_pipeline_streams(const struct spek_pipeline *pipeline)
@@ -314,8 +412,10 @@ static void * reader_func(void *pp)
 {
     struct spek_pipeline *p = (spek_pipeline*)pp;
 
-    p->has_worker_thread = !pthread_create(&p->worker_thread, NULL, &worker_func, p);
-    if (!p->has_worker_thread) {
+    try {
+        p->worker_thread = std::thread(worker_func, p);
+        p->has_worker_thread = true;
+    } catch (...) {
         return NULL;
     }
 
@@ -344,7 +444,10 @@ static void * reader_func(void *pp)
 
     // Force the worker to quit.
     reader_sync(p, -1);
-    pthread_join(p->worker_thread, NULL);
+    if (p->worker_thread.joinable()) {
+        p->worker_thread.join();
+    }
+    p->has_worker_thread = false;
 
     // Notify the client.
     p->cb(p->fft->get_output_size(), -1, NULL, p->cb_data);
@@ -353,17 +456,19 @@ static void * reader_func(void *pp)
 
 static void reader_sync(struct spek_pipeline *p, int pos)
 {
-    pthread_mutex_lock(&p->reader_mutex);
-    while (!p->worker_done) {
-        pthread_cond_wait(&p->reader_cond, &p->reader_mutex);
+    {
+        std::unique_lock<std::mutex> lock(p->reader_mutex);
+        p->reader_cond.wait(lock, [p] {
+            return p->worker_done;
+        });
+        p->worker_done = false;
     }
-    p->worker_done = false;
-    pthread_mutex_unlock(&p->reader_mutex);
 
-    pthread_mutex_lock(&p->worker_mutex);
-    p->input_pos = pos;
-    pthread_cond_signal(&p->worker_cond);
-    pthread_mutex_unlock(&p->worker_mutex);
+    {
+        std::lock_guard<std::mutex> lock(p->worker_mutex);
+        p->input_pos = pos;
+    }
+    p->worker_cond.notify_one();
 }
 
 static float get_window(enum window_function f, int i, float *coss, int n) {
@@ -394,17 +499,19 @@ static void * worker_func(void *pp)
     memset(p->output, 0, sizeof(float) * p->fft->get_output_size());
 
     while (true) {
-        pthread_mutex_lock(&p->reader_mutex);
-        p->worker_done = true;
-        pthread_cond_signal(&p->reader_cond);
-        pthread_mutex_unlock(&p->reader_mutex);
-
-        pthread_mutex_lock(&p->worker_mutex);
-        while (tail == p->input_pos) {
-            pthread_cond_wait(&p->worker_cond, &p->worker_mutex);
+        {
+            std::lock_guard<std::mutex> lock(p->reader_mutex);
+            p->worker_done = true;
         }
-        tail = p->input_pos;
-        pthread_mutex_unlock(&p->worker_mutex);
+        p->reader_cond.notify_one();
+
+        {
+            std::unique_lock<std::mutex> lock(p->worker_mutex);
+            p->worker_cond.wait(lock, [p, tail] {
+                return tail != p->input_pos;
+            });
+            tail = p->input_pos;
+        }
 
         if (tail == -1) {
             return NULL;
