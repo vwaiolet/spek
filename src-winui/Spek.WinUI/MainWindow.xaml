@@ -1,0 +1,420 @@
+<Window
+    x:Class="Spek.WinUI.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid
+        x:Name="Root"
+        AllowDrop="True"
+        Background="{StaticResource AppBackgroundBrush}"
+        DragOver="OnRootDragOver"
+        Drop="OnRootDrop"
+        Loaded="OnRootLoaded">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="72" />
+            <RowDefinition Height="48" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="32" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Padding="18,10,14,10" Background="{StaticResource HeaderBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock
+                    x:Name="TitleText"
+                    FontSize="20"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource PrimaryTextBrush}"
+                    Text="Spek"
+                    TextTrimming="CharacterEllipsis" />
+                <TextBlock
+                    x:Name="DetailText"
+                    Margin="0,3,0,0"
+                    FontSize="12"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    Text="Acoustic spectrum analyser"
+                    TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button
+                    Click="OnOpenClick"
+                    Style="{StaticResource CommandButtonStyle}"
+                    ToolTipService.ToolTip="Open">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="16" Glyph="&#xE8E5;" />
+                        <TextBlock Text="Open" />
+                    </StackPanel>
+                </Button>
+
+                <Button
+                    x:Name="SaveButton"
+                    Click="OnSaveClick"
+                    IsEnabled="False"
+                    Style="{StaticResource CommandButtonStyle}"
+                    ToolTipService.ToolTip="Save PNG">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="16" Glyph="&#xE74E;" />
+                        <TextBlock Text="Save" />
+                    </StackPanel>
+                </Button>
+
+                <Button
+                    Click="OnPreferencesClick"
+                    Style="{StaticResource CommandButtonStyle}"
+                    ToolTipService.ToolTip="Preferences">
+                    <FontIcon FontSize="16" Glyph="&#xE713;" />
+                </Button>
+
+                <Button
+                    Click="OnHelpClick"
+                    Style="{StaticResource CommandButtonStyle}"
+                    ToolTipService.ToolTip="Help">
+                    <FontIcon FontSize="16" Glyph="&#xE897;" />
+                </Button>
+
+                <Button
+                    Click="OnAboutClick"
+                    Style="{StaticResource CommandButtonStyle}"
+                    ToolTipService.ToolTip="About">
+                    <FontIcon FontSize="16" Glyph="&#xE946;" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <ScrollViewer
+            Grid.Row="1"
+            Background="{StaticResource ToolbarBrush}"
+            HorizontalScrollBarVisibility="Auto"
+            HorizontalScrollMode="Enabled"
+            VerticalScrollBarVisibility="Disabled"
+            VerticalScrollMode="Disabled">
+            <StackPanel Padding="12,7" Orientation="Horizontal" Spacing="8">
+                <Button
+                    x:Name="StreamButton"
+                    Click="OnStreamClick"
+                    IsEnabled="False"
+                    Style="{StaticResource ToolButtonStyle}"
+                    ToolTipService.ToolTip="Stream">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <FontIcon FontSize="14" Glyph="&#xE8B7;" />
+                        <TextBlock x:Name="StreamText" Text="Stream 1 / 1" />
+                    </StackPanel>
+                </Button>
+
+                <Button
+                    x:Name="ChannelButton"
+                    Click="OnChannelClick"
+                    Style="{StaticResource ToolButtonStyle}"
+                    ToolTipService.ToolTip="Channel">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <FontIcon FontSize="14" Glyph="&#xE9E9;" />
+                        <TextBlock x:Name="ChannelText" Text="Channel 1 / 1" />
+                    </StackPanel>
+                </Button>
+
+                <Button
+                    Click="OnPaletteClick"
+                    Style="{StaticResource ToolButtonStyle}"
+                    ToolTipService.ToolTip="Palette">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <FontIcon FontSize="14" Glyph="&#xE790;" />
+                        <TextBlock x:Name="PaletteText" Text="Palette SoX" />
+                    </StackPanel>
+                </Button>
+
+                <Button
+                    Click="OnWindowFunctionClick"
+                    Style="{StaticResource ToolButtonStyle}"
+                    ToolTipService.ToolTip="Window function">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <FontIcon FontSize="14" Glyph="&#xE9A6;" />
+                        <TextBlock x:Name="WindowFunctionText" Text="Hann" />
+                    </StackPanel>
+                </Button>
+
+                <Border Width="1" Margin="4,2" Background="#3C5364" />
+
+                <Button
+                    Click="OnFftDownClick"
+                    Style="{StaticResource ToolButtonStyle}"
+                    ToolTipService.ToolTip="Smaller FFT">
+                    <FontIcon FontSize="14" Glyph="&#xE949;" />
+                </Button>
+
+                <Border
+                    MinWidth="78"
+                    Padding="10,0"
+                    Background="#0E151C"
+                    BorderBrush="#304655"
+                    BorderThickness="1"
+                    CornerRadius="6">
+                    <TextBlock
+                        x:Name="FftText"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource PrimaryTextBrush}"
+                        Text="FFT 2048" />
+                </Border>
+
+                <Button
+                    Click="OnFftUpClick"
+                    Style="{StaticResource ToolButtonStyle}"
+                    ToolTipService.ToolTip="Larger FFT">
+                    <FontIcon FontSize="14" Glyph="&#xE948;" />
+                </Button>
+
+                <Border Width="1" Margin="4,2" Background="#3C5364" />
+
+                <Button
+                    Click="OnUpperRangeDownClick"
+                    Style="{StaticResource ToolButtonStyle}"
+                    ToolTipService.ToolTip="Lower upper dB limit">
+                    <FontIcon FontSize="14" Glyph="&#xE949;" />
+                </Button>
+
+                <Border
+                    MinWidth="92"
+                    Padding="10,0"
+                    Background="#0E151C"
+                    BorderBrush="#304655"
+                    BorderThickness="1"
+                    CornerRadius="6">
+                    <TextBlock
+                        x:Name="UpperRangeText"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource PrimaryTextBrush}"
+                        Text="Upper 0 dB" />
+                </Border>
+
+                <Button
+                    Click="OnUpperRangeUpClick"
+                    Style="{StaticResource ToolButtonStyle}"
+                    ToolTipService.ToolTip="Raise upper dB limit">
+                    <FontIcon FontSize="14" Glyph="&#xE948;" />
+                </Button>
+
+                <Button
+                    Click="OnLowerRangeDownClick"
+                    Style="{StaticResource ToolButtonStyle}"
+                    ToolTipService.ToolTip="Lower lower dB limit">
+                    <FontIcon FontSize="14" Glyph="&#xE949;" />
+                </Button>
+
+                <Border
+                    MinWidth="100"
+                    Padding="10,0"
+                    Background="#0E151C"
+                    BorderBrush="#304655"
+                    BorderThickness="1"
+                    CornerRadius="6">
+                    <TextBlock
+                        x:Name="LowerRangeText"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource PrimaryTextBrush}"
+                        Text="Lower -120 dB" />
+                </Border>
+
+                <Button
+                    Click="OnLowerRangeUpClick"
+                    Style="{StaticResource ToolButtonStyle}"
+                    ToolTipService.ToolTip="Raise lower dB limit">
+                    <FontIcon FontSize="14" Glyph="&#xE948;" />
+                </Button>
+            </StackPanel>
+        </ScrollViewer>
+
+        <InfoBar
+            x:Name="UpdateInfoBar"
+            Grid.Row="2"
+            IsOpen="False"
+            Message="A new version of Spek is available."
+            Severity="Informational"
+            Title="Update available">
+            <InfoBar.ActionButton>
+                <Button Click="OnVisitWebsiteClick" Content="Download" />
+            </InfoBar.ActionButton>
+        </InfoBar>
+
+        <Grid
+            x:Name="SpectrogramHost"
+            Grid.Row="3"
+            Padding="16,12,16,10"
+            Background="{StaticResource PanelBrush}"
+            SizeChanged="OnSpectrogramHostSizeChanged">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="50" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="36" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="58" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="86" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Bottom">
+                <TextBlock
+                    x:Name="PlotFileName"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource PrimaryTextBrush}"
+                    Text="Spek"
+                    TextTrimming="CharacterEllipsis" />
+                <TextBlock
+                    x:Name="PlotDescription"
+                    Margin="0,2,0,0"
+                    FontSize="12"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    Text="Ready"
+                    TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+
+            <Grid Grid.Row="1" Grid.Column="0" Margin="0,0,9,0">
+                <TextBlock
+                    x:Name="FreqTopText"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    FontSize="11"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    Text="-" />
+                <TextBlock
+                    x:Name="FreqMidText"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    Text="-" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    FontSize="11"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    Text="0 Hz" />
+            </Grid>
+
+            <Border
+                x:Name="SpectrogramFrame"
+                Grid.Row="1"
+                Grid.Column="1"
+                Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1">
+                <Grid>
+                    <Image x:Name="SpectrogramImage" Stretch="Fill" />
+
+                    <StackPanel
+                        x:Name="EmptyState"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8">
+                        <FontIcon
+                            FontSize="32"
+                            Foreground="{StaticResource WarmAccentBrush}"
+                            Glyph="&#xE8D6;" />
+                        <TextBlock
+                            FontSize="14"
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="No audio loaded" />
+                    </StackPanel>
+
+                    <Grid
+                        x:Name="BusyOverlay"
+                        Background="#AA05070A"
+                        Visibility="Collapsed">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                            <ProgressRing
+                                Width="42"
+                                Height="42"
+                                IsActive="True"
+                                Foreground="{StaticResource AccentBrush}" />
+                            <TextBlock
+                                FontSize="13"
+                                Foreground="{StaticResource PrimaryTextBrush}"
+                                Text="Analyzing" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="1" Grid.Column="2" Margin="10,0,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1">
+                    <Image x:Name="PaletteImage" Stretch="Fill" />
+                </Border>
+
+                <Grid Grid.Column="1" Margin="8,0,0,0">
+                    <TextBlock
+                        x:Name="DbTopText"
+                        VerticalAlignment="Top"
+                        FontSize="11"
+                        Foreground="{StaticResource SecondaryTextBrush}"
+                        Text="0 dB" />
+                    <TextBlock
+                        x:Name="DbMidText"
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="{StaticResource SecondaryTextBrush}"
+                        Text="-60 dB" />
+                    <TextBlock
+                        x:Name="DbBottomText"
+                        VerticalAlignment="Bottom"
+                        FontSize="11"
+                        Foreground="{StaticResource SecondaryTextBrush}"
+                        Text="-120 dB" />
+                </Grid>
+            </Grid>
+
+            <Grid Grid.Row="2" Grid.Column="1">
+                <TextBlock
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    Text="0:00" />
+                <TextBlock
+                    x:Name="TimeMidText"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    Text="-" />
+                <TextBlock
+                    x:Name="TimeEndText"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    Text="-" />
+            </Grid>
+        </Grid>
+
+        <Border Grid.Row="4" Background="#081019" BorderBrush="#1F3545" BorderThickness="0,1,0,0">
+            <TextBlock
+                x:Name="StatusText"
+                Margin="14,0"
+                VerticalAlignment="Center"
+                FontSize="12"
+                Foreground="{StaticResource SecondaryTextBrush}"
+                Text="Ready"
+                TextTrimming="CharacterEllipsis" />
+        </Border>
+    </Grid>
+</Window>
